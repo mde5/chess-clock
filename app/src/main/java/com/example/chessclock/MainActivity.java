@@ -24,12 +24,10 @@ public class MainActivity extends AppCompatActivity {
     private CountDownTimer cB;
     private long startTimeInMillis = DEFAULT_START_TIME;
     private int increment = 0;
-    private long timeLeftA = DEFAULT_START_TIME;
-    private long timeLeftB = DEFAULT_START_TIME;
-    private boolean isRunningA;
-    private boolean isRunningB;
-    private boolean isFinishedA;
-    private boolean isFinishedB;
+
+    private ChessClock clockA = new ChessClock(DEFAULT_START_TIME);
+    private ChessClock clockB = new ChessClock(DEFAULT_START_TIME);
+
     private boolean gamePaused = false;
     private boolean gameAlreadyPaused = false;
     char whoPaused = '\u0000';
@@ -42,8 +40,9 @@ public class MainActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         int minutes = intent.getIntExtra(SettingsActivity.EXTRA_MINUTES, 0);
+        int seconds = intent.getIntExtra(SettingsActivity.EXTRA_SECONDS, 0);
         increment = intent.getIntExtra(SettingsActivity.EXTRA_INCREMENT, 0);
-        startTimeInMillis = minutes * 60000;
+        startTimeInMillis = minutes * 60000 + (seconds * 1000);
         initClocks();
 
         clockAButton = findViewById(R.id.buttonA);
@@ -55,14 +54,14 @@ public class MainActivity extends AppCompatActivity {
         clockAButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!gameAlreadyPaused)startStopB();
+                if(!gameAlreadyPaused)startStop(clockA, clockB, clockAButton, clockBButton);
             }
         });
 
         clockBButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!gameAlreadyPaused)startStopA();
+                if(!gameAlreadyPaused)startStop(clockB, clockA, clockBButton, clockAButton);
             }
         });
 
@@ -91,98 +90,85 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        updateTimerA();
-        updateTimerB();
+        updateTimer(clockA, clockAButton);
+        updateTimer(clockB, clockBButton);
     }
 
     public void initClocks(){
         if(startTimeInMillis > 0) {
-            timeLeftA = startTimeInMillis;
-            timeLeftB = startTimeInMillis;
+            clockA.setTimeOnClock(startTimeInMillis);
+            clockB.setTimeOnClock(startTimeInMillis);
         }
         else{
-            timeLeftA = DEFAULT_START_TIME;
-            timeLeftB = DEFAULT_START_TIME;
+            clockA.setTimeOnClock(DEFAULT_START_TIME);
+            clockB.setTimeOnClock(DEFAULT_START_TIME);
         }
     }
 
-    public void startStopB(){
-        if (isRunningA)
-            stopClockA();
-        if(!isRunningB && !isFinishedA)
-            startClockB();
+    public void startStop(ChessClock c1, ChessClock c2, Button button1, Button button2){
+        if (c1.isRunning())
+            stopClock(c1, button1);
+        if(!c2.isRunning() && !c1.isFinished())
+            startClock(c2, button2);
     }
 
-    public void startStopA(){
-        if(isRunningB)
-            stopClockB();
-        if(!isRunningA && !isFinishedB)
-            startClockA();
+    public void startClock(final ChessClock chessClock, final Button button){
+        if(chessClock.equals(clockA)) {
+            cA = new CountDownTimer(chessClock.getTimeOnClock(), 10) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    chessClock.setTimeOnClock(millisUntilFinished);
+                    updateTimer(chessClock, button);
+                }
+
+                @Override
+                public void onFinish() {
+                    button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(237, 56, 36)));
+                    button.setTextColor(Color.WHITE);
+                    chessClock.setFinished(true);
+                    stopClock(chessClock, button);
+                }
+            }.start();
+        }
+        else if(chessClock.equals(clockB)) {
+            cB = new CountDownTimer(chessClock.getTimeOnClock(), 10) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    chessClock.setTimeOnClock(millisUntilFinished);
+                    updateTimer(chessClock, button);
+                }
+
+                @Override
+                public void onFinish() {
+                    button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(237, 56, 36)));
+                    button.setTextColor(Color.WHITE);
+                    chessClock.setFinished(true);
+                    stopClock(chessClock, button);
+                }
+            }.start();
+        }
+            chessClock.setRunning(true);
     }
 
-    public void startClockB(){
-        cB = new CountDownTimer(timeLeftB, 10) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                timeLeftB = millisUntilFinished;
-                updateTimerB();
-            }
-
-            @Override
-            public void onFinish() {
-                clockBButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(237, 56, 36)));
-                clockBButton.setTextColor(Color.WHITE);
-                isFinishedB = true;
-                stopClockB();
-            }
-        }.start();
-
-        isRunningB = true;
-    }
-
-    public void stopClockA(){
-        cA.cancel();
-        isRunningA = false;
+    public void stopClock(ChessClock chessClock, Button button){
+        if(chessClock.equals(clockA)){
+           cA.cancel();
+        }
+        if(chessClock.equals(clockB)){
+            cB.cancel();
+        }
+        chessClock.setRunning(false);
         if(!gamePaused) {
-            if(!isFinishedA)
-                timeLeftA += (increment * 1000);
-            updateTimerA();
+            if(!chessClock.isFinished())
+                chessClock.setTimeOnClock(chessClock.getTimeOnClock() + (increment * 1000));
+            updateTimer(chessClock, button);
         }
     }
 
-    public void startClockA(){
-        cA = new CountDownTimer(timeLeftA, 10) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                timeLeftA = millisUntilFinished;
-                updateTimerA();
-            }
-
-            @Override
-            public void onFinish() {
-                clockAButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(237, 56, 36)));
-                isFinishedA = true;
-                stopClockA();
-            }
-        }.start();
-
-        isRunningA = true;
-    }
-
-    public void stopClockB(){
-        cB.cancel();
-        isRunningB = false;
-        if(!gamePaused) {
-            if(!isFinishedB)
-                timeLeftB += (increment * 1000);
-            updateTimerB();
-        }
-    }
-
-    public void updateTimerB(){
-        int minutes = (int) timeLeftB / 60000;
-        int seconds = (int) timeLeftB % 60000 / 1000;
-        int milliseconds = (int) timeLeftB % 1000 / 100;
+    public void updateTimer(ChessClock chessClock, Button button){
+        int minutes = (int) chessClock.getTimeOnClock() / 60000;
+        int seconds = (int) chessClock.getTimeOnClock() % 60000 / 1000;
+        int milliseconds = (int) chessClock.getTimeOnClock() % 1000 / 100;
         String timeText = "" + minutes;
         timeText += ":";
         if (seconds < 10)
@@ -193,53 +179,35 @@ public class MainActivity extends AppCompatActivity {
             timeText += milliseconds;
         }
 
-        clockBButton.setText(timeText);
-    }
-    public void updateTimerA(){
-        int minutes = (int) timeLeftA / 60000;
-        int seconds = (int) timeLeftA % 60000 / 1000;
-        int milliseconds = (int) timeLeftA % 1000 / 100;
-        String timeText = "" + minutes;
-        timeText += ":";
-        if (seconds < 10)
-            timeText += "0";
-        timeText += seconds;
-        if(minutes < 1 && seconds < 10){
-            timeText += ".";
-            timeText += milliseconds;
-        }
-
-
-        clockAButton.setText(timeText);
+        button.setText(timeText);
     }
 
     public void pauseClocks(){
-            gamePaused = true;
+        gamePaused = true;
         //stores which clock is running when the game is paused
-        if(isRunningA)
+        if(clockA.isRunning())
             whoPaused = 'A';
-        if(isRunningB)
+        if(clockB.isRunning())
             whoPaused = 'B';
 
         if(gameAlreadyPaused){
             unPauseClocks();
         }
-
         //Pauses the game if: 1. game is not already paused 2. A clock is running when the pause button is pressed
         if(whoPaused != '\u0000') {
-            if(isRunningA)
-                stopClockA();
-            if(isRunningB)
-                stopClockB();
+            if(clockA.isRunning())
+                stopClock(clockA, clockAButton);
+            if(clockB.isRunning())
+                stopClock(clockB, clockBButton);
             gameAlreadyPaused = true;
         }
     }
 
     public void unPauseClocks(){
         if(whoPaused == 'A')
-            startStopA();
+            startStop(clockB, clockA, clockBButton, clockAButton);
         if(whoPaused == 'B')
-            startStopB();
+            startStop(clockA, clockB, clockAButton, clockBButton);
 
         whoPaused = '\u0000';
 
@@ -248,15 +216,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void resetClocks(){
-        if(isRunningA) {
-            stopClockA();
+        if(clockA.isRunning()) {
+            stopClock(clockA, clockAButton);
             initClocks();
         }
-        if(isRunningB) {
-            stopClockB();
+        if(clockB.isRunning()) {
+            stopClock(clockB, clockBButton);
             initClocks();
         }
-        if(isFinishedA || isFinishedB){
+        if(clockA.isFinished() || clockB.isFinished()){
             initClocks();
         }
         //Special case: User resets game while game already paused; i.e. above conditions above will fail since neither clock is running or finished;
@@ -265,10 +233,10 @@ public class MainActivity extends AppCompatActivity {
             whoPaused = '\u0000';
             unPauseClocks();
         }
-        isFinishedA = false;
-        isFinishedB = false;
-        updateTimerA();
-        updateTimerB();
+        clockA.setFinished(false);
+        clockB.setFinished(false);
+        updateTimer(clockA, clockAButton);
+        updateTimer(clockB, clockBButton);
         clockAButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(36, 156, 237)));
         clockBButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(214, 215, 215)));
         clockBButton.setTextColor(Color.BLACK);
