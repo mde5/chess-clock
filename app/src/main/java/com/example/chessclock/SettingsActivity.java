@@ -38,39 +38,37 @@ public class SettingsActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String timeMin = editTimeMinInput.getText().toString();
                 String timeSec = editTimeSecInput.getText().toString();
-                if(timeMin.length() + timeSec.length() == 0) {
-                    Toast.makeText(SettingsActivity.this, "Time cannot be zero", Toast.LENGTH_SHORT).show();
-                    return;
+                String timeInc = editIncrementInput.getText().toString();
+
+                if(!timeMin.isEmpty() && !timeSec.isEmpty()) {
+                    minutes = Integer.parseInt(timeMin);
+                    seconds = Integer.parseInt(timeSec);
                 }
-                int minutesInput = Integer.parseInt(timeMin);
-                int secondsInput = Integer.parseInt(timeSec);
-                if(minutesInput + secondsInput == 0){
+                else {
+                    if(timeMin.isEmpty() && timeSec.isEmpty()){
+                        minutes = 0;
+                        seconds = 0;
+                    }
+                    else if (timeMin.isEmpty()) {
+                        minutes = 0;
+                        seconds = Integer.parseInt(timeSec);
+                    }
+                    else {
+                        seconds = 0;
+                        minutes = Integer.parseInt(timeMin);
+                    }
+                }
+                if(minutes + seconds == 0){
                     Toast.makeText(SettingsActivity.this, "Time must be greater than zero", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                setTime(minutesInput, secondsInput);
-                String inc = editIncrementInput.getText().toString();
-                if(inc.length() == 0) {
-                    setIncrement(0);
-                    return;
+
+                if(timeInc.isEmpty()) {
+                    increment = 0;
                 }
-                int incrementInput = Integer.parseInt(inc);
-                if(incrementInput == 0){
-                    setIncrement(0);
-                }
-                setIncrement(incrementInput);
                 openMainActivity();
             }
         });
-
-    }
-
-    private void setTime(int m, int s){
-        minutes = m;
-        seconds = s;
-    }
-    private void setIncrement(int inc){
-        increment = inc;
     }
 
     public void openMainActivity(){
